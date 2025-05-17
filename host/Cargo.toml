@@ -8,3 +8,7 @@ methods = { path = "../methods" }
 risc0-zkvm = { version = "^2.0.2" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde = "1.0"
+anyhow = "1.0.98"
+data-encoding = "2.9.0"
+hex-literal = "0.4.1"
+tracing = "0.1.41"
