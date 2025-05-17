@@ -3,7 +3,6 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
 use byteorder::{BigEndian, ByteOrder};
 use hmac::{Hmac, Mac};
 use risc0_zkvm::guest::env;
@@ -40,7 +39,7 @@ fn verify_and_hash(secret: &[u8], otp_code: u32, time_step: u64) -> ([u8; 32], [
 risc0_zkvm::guest::entry!(main);
 
 fn main() {
-    let secret_bytes: Vec<u8> = env::read();
+    let secret_bytes: [u8; 32] = env::read();
     let otp_code: u32 = env::read();
     let time_step: u64 = env::read();
     let action_hash: [u8; 32] = env::read();
@@ -78,9 +77,12 @@ mod tests {
 
     #[test]
     fn verify_and_hash_matches_reference() {
-        let secret_bytes = BASE32_NOPAD
+        let secret_bytes: [u8; 32];
+        secret_bytes = BASE32_NOPAD
             .decode(SECRET_B32.as_bytes())
-            .expect("valid base32");
+            .expect("valid base32")
+            .try_into()
+            .expect("valid base32 length");
 
         let (hashed_secret, hashed_otp) = verify_and_hash(&secret_bytes, EXPECTED_OTP, TIME_STEP);
 

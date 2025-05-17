@@ -28,12 +28,14 @@ fn main() -> Result<()> {
         hex!("9f68041ff3c6f6acf9bd1980ec97e83265fb6cfcfb8b3a5d8d4baabd4b4c418e");
     const TX_NONCE: u32 = 7;
 
-    let secret_bytes = BASE32_NOPAD
+    let secret_byte: [u8; 32] = BASE32_NOPAD
         .decode(SECRET_B32.as_bytes())
-        .expect("valid base32");
+        .expect("valid base32")
+        .try_into()
+        .expect("valid base32 length");
 
     let env = ExecutorEnv::builder()
-        .write(&secret_bytes)?
+        .write(&secret_byte)?
         .write(&EXPECTED_OTP)?
         .write(&TIME_STEP)?
         .write(&ACTION_HASH_BYTES)?
