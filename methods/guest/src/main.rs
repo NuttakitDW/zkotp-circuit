@@ -53,8 +53,6 @@ fn main() {
     env::commit(&time_step);
     env::commit(&action_hash);
     env::commit(&tx_nonce);
-
-    env::log(&format!("Cycle count: {}", env::cycle_count()));
 }
 
 /*──────────────────────────  UNIT TESTS  ──────────────────────────*/
