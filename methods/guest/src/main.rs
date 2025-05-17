@@ -1,6 +1,9 @@
 #![no_std]
 #![cfg_attr(not(test), no_main)]
 
+extern crate alloc;
+
+use alloc::{format, vec::Vec};
 use byteorder::{BigEndian, ByteOrder};
 use hmac::{Hmac, Mac};
 use risc0_zkvm::guest::env;
@@ -37,19 +40,21 @@ fn verify_and_hash(secret: &[u8], otp_code: u32, time_step: u64) -> ([u8; 32], [
 risc0_zkvm::guest::entry!(main);
 
 fn main() {
-    let secret: [u8; 32] = env::read(); // adjust length to your protocol
+    let secret_bytes: Vec<u8> = env::read();
     let otp_code: u32 = env::read();
     let time_step: u64 = env::read();
     let action_hash: [u8; 32] = env::read();
     let tx_nonce: u32 = env::read();
 
-    let (hashed_secret, hashed_otp) = verify_and_hash(&secret, otp_code, time_step);
+    let (hashed_secret, hashed_otp) = verify_and_hash(&secret_bytes, otp_code, time_step);
 
     env::commit(&hashed_secret);
     env::commit(&hashed_otp);
     env::commit(&time_step);
     env::commit(&action_hash);
     env::commit(&tx_nonce);
+
+    env::log(&format!("Cycle count: {}", env::cycle_count()));
 }
 
 /*──────────────────────────  UNIT TESTS  ──────────────────────────*/
