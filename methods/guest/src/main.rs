@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 use byteorder::{BigEndian, ByteOrder};
 use hmac::{Hmac, Mac};
 use risc0_zkvm::guest::env;
