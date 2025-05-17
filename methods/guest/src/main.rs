@@ -4,7 +4,6 @@
 extern crate alloc;
 
 use risc0_zkvm::guest::env;
-use sha2::{Digest as _, Sha256};
 
 fn verify_otp(hmac: [u8; 20], otp_code: u32) {
     let o = (hmac[19] & 0x0f) as usize;
@@ -21,12 +20,10 @@ risc0_zkvm::guest::entry!(main);
 
 fn main() {
     let hmac: [u8; 20] = env::read();
-    let secret_bytes: [u8; 32] = env::read();
+    let hashed_secret: [u8; 32] = env::read();
     let otp_code: u32 = env::read();
     let action_hash: [u8; 32] = env::read();
     let tx_nonce: u32 = env::read();
-
-    let hashed_secret: [u8; 32] = Sha256::digest(secret_bytes).into();
 
     verify_otp(hmac, otp_code);
 

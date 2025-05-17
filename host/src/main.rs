@@ -6,6 +6,7 @@ use hmac::{Hmac, Mac};
 use methods::{OTP_ELF, OTP_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
 use sha1::Sha1;
+use sha2::{Digest as _, Sha256};
 use std::time::Instant;
 use tracing_subscriber::filter::EnvFilter;
 
@@ -37,6 +38,8 @@ fn main() -> Result<()> {
         .try_into()
         .expect("valid base32 length");
 
+    let hashed_secret: [u8; 32] = Sha256::digest(secret_bytes).into();
+
     let mut counter = [0u8; 8];
     BigEndian::write_u64(&mut counter, TIME_STEP);
 
@@ -47,17 +50,17 @@ fn main() -> Result<()> {
 
     let env = ExecutorEnv::builder()
         .write(&hmac_array)?
-        .write(&secret_bytes)?
+        .write(&hashed_secret)?
         .write(&EXPECTED_OTP)?
         .write(&ACTION_HASH_BYTES)?
         .write(&TX_NONCE)?
         .build()?;
 
-    let mut start = Instant::now();
     let prover = default_prover();
+    let mut start = Instant::now();
     let prove_info = prover.prove(env, OTP_ELF)?;
-    let receipt = prove_info.receipt;
     let mut duration = start.elapsed();
+    let receipt = prove_info.receipt;
 
     println!("Time taken to generate proof: {:?}", duration);
 
