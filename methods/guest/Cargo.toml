@@ -11,6 +11,7 @@ data-encoding = "2.9.0"
 hex = "0.4.3"
 hex-literal = "0.4.1"
 hmac = "0.12.1"
+log = "0.4.27"
 risc0-zkvm = { version = "^2.0.2", default-features = false, features = ['std'] }
 sha1 = "0.10.6"
 sha2 = "0.10.9"
