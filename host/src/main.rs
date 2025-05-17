@@ -1,8 +1,11 @@
 use anyhow::Result;
+use byteorder::{BigEndian, ByteOrder};
 use data_encoding::BASE32_NOPAD;
 use hex_literal::hex;
+use hmac::{Hmac, Mac};
 use methods::{OTP_ELF, OTP_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
+use sha1::Sha1;
 use std::time::Instant;
 use tracing_subscriber::filter::EnvFilter;
 
@@ -10,8 +13,6 @@ use tracing_subscriber::filter::EnvFilter;
 #[allow(dead_code)]
 struct Journal {
     hashed_secret: [u8; 32],
-    hashed_otp: [u8; 32],
-    time_step: u64,
     action_hash: [u8; 32],
     tx_nonce: u32,
 }
@@ -21,6 +22,8 @@ fn main() -> Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
+    type HmacSha1 = Hmac<Sha1>;
+
     const SECRET_B32: &str = "HNKHWJTBOISS65S6IM2D6UDYNEZCCZLZI5TEWRJJGBJUE33IEVXQ";
     const EXPECTED_OTP: u32 = 400_613;
     const TIME_STEP: u64 = 0;
@@ -28,16 +31,24 @@ fn main() -> Result<()> {
         hex!("9f68041ff3c6f6acf9bd1980ec97e83265fb6cfcfb8b3a5d8d4baabd4b4c418e");
     const TX_NONCE: u32 = 7;
 
-    let secret_byte: [u8; 32] = BASE32_NOPAD
+    let secret_bytes: [u8; 32] = BASE32_NOPAD
         .decode(SECRET_B32.as_bytes())
         .expect("valid base32")
         .try_into()
         .expect("valid base32 length");
 
+    let mut counter = [0u8; 8];
+    BigEndian::write_u64(&mut counter, TIME_STEP);
+
+    let mut mac = HmacSha1::new_from_slice(&secret_bytes).unwrap();
+    mac.update(&counter);
+    let hmac = mac.finalize().into_bytes();
+    let hmac_array: [u8; 20] = hmac.as_slice().try_into().unwrap();
+
     let env = ExecutorEnv::builder()
-        .write(&secret_byte)?
+        .write(&hmac_array)?
+        .write(&secret_bytes)?
         .write(&EXPECTED_OTP)?
-        .write(&TIME_STEP)?
         .write(&ACTION_HASH_BYTES)?
         .write(&TX_NONCE)?
         .build()?;
