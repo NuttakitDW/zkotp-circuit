@@ -10,12 +10,12 @@ use sha2::{Digest as _, Sha256};
 use std::time::Instant;
 use tracing_subscriber::filter::EnvFilter;
 
-#[derive(Debug, serde::Deserialize)]
-#[allow(dead_code)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Journal {
     hashed_secret: [u8; 32],
     action_hash: [u8; 32],
     tx_nonce: u32,
+    cycle_count: u32,
 }
 
 fn main() -> Result<()> {
@@ -57,18 +57,22 @@ fn main() -> Result<()> {
         .build()?;
 
     let prover = default_prover();
-    let mut start = Instant::now();
+    let start = Instant::now();
     let prove_info = prover.prove(env, OTP_ELF)?;
-    let mut duration = start.elapsed();
+    let duration = start.elapsed();
     let receipt = prove_info.receipt;
 
     println!("Time taken to generate proof: {:?}", duration);
 
-    let _: Journal = receipt.journal.decode()?;
+    let journal_bytes = receipt.journal.bytes.as_slice();
+    let journal = Journal {
+        hashed_secret: journal_bytes[0..32].try_into()?,
+        action_hash: journal_bytes[32..64].try_into()?,
+        tx_nonce: u32::from_be_bytes(journal_bytes[64..68].try_into()?),
+        cycle_count: u32::from_be_bytes(journal_bytes[68..72].try_into()?),
+    };
+    println!("Cycle count: {}", journal.cycle_count);
 
-    start = Instant::now();
     receipt.verify(OTP_ID)?;
-    duration = start.elapsed();
-    println!("Time taken to verify proof: {:?}", duration);
     Ok(())
 }
