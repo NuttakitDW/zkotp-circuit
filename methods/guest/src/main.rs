@@ -19,6 +19,7 @@ fn verify_otp(hmac: [u8; 20], otp_code: u32) {
 risc0_zkvm::guest::entry!(main);
 
 fn main() {
+    let before_cycle = env::cycle_count();
     let hmac: [u8; 20] = env::read();
     let hashed_secret: [u8; 32] = env::read();
     let otp_code: u32 = env::read();
@@ -27,9 +28,17 @@ fn main() {
 
     verify_otp(hmac, otp_code);
 
-    env::commit(&hashed_secret);
-    env::commit(&action_hash);
-    env::commit(&tx_nonce);
+    let mut buf = [0u8; 68];
+    buf[0..32].copy_from_slice(&hashed_secret);
+    buf[32..64].copy_from_slice(&action_hash);
+    buf[64..68].copy_from_slice(&tx_nonce.to_be_bytes());
+
+    env::commit_slice(&buf);
+
+    // TODO: remove cycle count from the guest
+    let after_cycle = env::cycle_count();
+    let cycle_count = after_cycle - before_cycle;
+    env::commit(&cycle_count);
 }
 
 /*──────────────────────────  UNIT TESTS  ──────────────────────────*/
