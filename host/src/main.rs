@@ -3,6 +3,7 @@ use data_encoding::BASE32_NOPAD;
 use hex_literal::hex;
 use methods::{OTP_ELF, OTP_ID};
 use risc0_zkvm::{default_prover, ExecutorEnv};
+use std::time::Instant;
 use tracing_subscriber::filter::EnvFilter;
 
 #[derive(Debug, serde::Deserialize)]
@@ -39,12 +40,19 @@ fn main() -> Result<()> {
         .write(&TX_NONCE)?
         .build()?;
 
+    let mut start = Instant::now();
     let prover = default_prover();
     let prove_info = prover.prove(env, OTP_ELF)?;
     let receipt = prove_info.receipt;
+    let mut duration = start.elapsed();
+
+    println!("Time taken to generate proof: {:?}", duration);
 
     let _: Journal = receipt.journal.decode()?;
 
+    start = Instant::now();
     receipt.verify(OTP_ID)?;
+    duration = start.elapsed();
+    println!("Time taken to verify proof: {:?}", duration);
     Ok(())
 }
