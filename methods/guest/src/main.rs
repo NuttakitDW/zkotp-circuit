@@ -21,19 +21,12 @@ risc0_zkvm::guest::entry!(main);
 fn main() {
     let before_cycle = env::cycle_count();
     let hmac: [u8; 20] = env::read();
-    let hashed_secret: [u8; 32] = env::read();
     let otp_code: u32 = env::read();
-    let action_hash: [u8; 32] = env::read();
-    let tx_nonce: u32 = env::read();
+    let nullifier: [u8; 32] = env::read();
 
     verify_otp(hmac, otp_code);
 
-    let mut buf = [0u8; 68];
-    buf[0..32].copy_from_slice(&hashed_secret);
-    buf[32..64].copy_from_slice(&action_hash);
-    buf[64..68].copy_from_slice(&tx_nonce.to_be_bytes());
-
-    env::commit_slice(&buf);
+    env::commit(&nullifier);
 
     // TODO: remove cycle count from the guest
     let after_cycle = env::cycle_count();

@@ -12,9 +12,7 @@ use tracing_subscriber::filter::EnvFilter;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Journal {
-    hashed_secret: [u8; 32],
-    action_hash: [u8; 32],
-    tx_nonce: u32,
+    nullifier: [u8; 32],
     cycle_count: u32,
 }
 
@@ -40,6 +38,14 @@ fn main() -> Result<()> {
 
     let hashed_secret: [u8; 32] = Sha256::digest(secret_bytes).into();
 
+    let nullifier: [u8; 32] = {
+        let mut hasher = Sha256::new();
+        hasher.update(&hashed_secret);
+        hasher.update(&ACTION_HASH_BYTES);
+        hasher.update(TX_NONCE.to_be_bytes());
+        hasher.finalize().into()
+    };
+
     let mut counter = [0u8; 8];
     BigEndian::write_u64(&mut counter, TIME_STEP);
 
@@ -50,10 +56,8 @@ fn main() -> Result<()> {
 
     let env = ExecutorEnv::builder()
         .write(&hmac_array)?
-        .write(&hashed_secret)?
         .write(&EXPECTED_OTP)?
-        .write(&ACTION_HASH_BYTES)?
-        .write(&TX_NONCE)?
+        .write(&nullifier)?
         .build()?;
 
     let prover = default_prover();
@@ -64,14 +68,8 @@ fn main() -> Result<()> {
 
     println!("Time taken to generate proof: {:?}", duration);
 
-    let journal_bytes = receipt.journal.bytes.as_slice();
-    let journal = Journal {
-        hashed_secret: journal_bytes[0..32].try_into()?,
-        action_hash: journal_bytes[32..64].try_into()?,
-        tx_nonce: u32::from_be_bytes(journal_bytes[64..68].try_into()?),
-        cycle_count: u32::from_be_bytes(journal_bytes[68..72].try_into()?),
-    };
-    println!("Cycle count: {}", journal.cycle_count);
+    let journal: Journal = receipt.journal.decode()?;
+    println!("cycle_count = {}", journal.cycle_count);
 
     receipt.verify(OTP_ID)?;
     Ok(())
